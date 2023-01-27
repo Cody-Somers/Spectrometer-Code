@@ -1,0 +1,59 @@
+# import the usb driver – place stellarnet_driverLibs folder in the same folder
+as the stellarnet_demo.py and library can be accessed as follow
+from stellarnet_driverLibs import stellarnet_driver3 as sn
+# import logging module
+import logging
+logging.basicConfig(format='%(asctime)s %(message)s')
+# Function definition to get data
+def getSpectrum(spectrometer, wav):
+ logging.warning('requesting spectrum')
+ spectrum = sn.array_spectrum(spectrometer, wav)
+ logging.warning('recieved spectrum')
+ return spectrum
+# Function definition to set parameters
+def setParam(spectrometer, wav, inttime, scansavg, smooth, xtiming):
+logging.warning('Setting Parameters')
+spectrometer['device'].set_config(int_time=inttime,
+scans_to_avg=scansavg, x_smooth=smooth, x_timing=xtiming)
+# Function definition to reset hardware by using """Destructor. Release device
+resources.""" Make sure to call "spectrometer, wav = sn.array_get_spec(0)" to
+init spectrometer again
+def reset(spectrometer):
+spectrometer['device'].__del__()
+# Function definition to Enable or Disable External Trigger Timeout by Passing
+True or False, If pass True then Timeout function will be disabled. User can
+use this function as timeout enable/disable
+def external_trigger(spectrometer,trigger):
+sn.ext_trig(spectrometer,trigger)
+# This returns a version number of the compilation date of the driver
+version = sn.version()
+
+#initialize Spectrometer
+spectrometer, wav = sn.array_get_spec(0) # 0 for first channel and 1 for
+second channel , up to 127 spectrometers
+# Device parameters to set
+inttime = 50
+scansavg = 1
+smooth = 0
+xtiming = 3
+# Get current device parameter
+currentParam = spectrometer['device'].get_config()
+# Call to Enable or Disable External Trigger by default is Disbale=False
+external_trigger(spectrometer,False)
+# Check to see if any parameters have changed, id so call setParam
+if ((currentParam['int_time'] != inttime) or (currentParam['scans_to_avg'] !=
+scansavg) or (currentParam['x_smooth'] != smooth) or (currentParam['x_timing']
+!= xtiming)):
+ setParam(spectrometer, wav, inttime, scansavg, smooth, xtiming)
+# Only call this setParam function on first call to get spectrum and when you
+change any parameters i.e inttime, scansavg, smooth.
+# Also call getSpectrum twice after this call as first sample of returned data
+may not be true for its inttime due to clock interrupt so we throw the first
+away and trust the 2nd and subsequent scans.
+ for i in range (2): # Call getSpectrum twice and discard first one!
+ data=getSpectrum(spectrometer, wav)
+else:
+ data=getSpectrum(spectrometer, wav)# if no parameters changes just get data
+once
+# Print data/spect
+print(data)
