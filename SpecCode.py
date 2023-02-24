@@ -64,21 +64,23 @@ while i == 1:  # Infinite while loop
     # Get spectrometer data - Get BOTH X and Y in single return
     data = sn.array_spectrum(spectrometer, wav)  # get specturm for the spectrometer
     f = open("specdata"+str(j)+".txt", "w+")
-    f.write(data)
+    f.write(str(data))
     f.close()
     # print('First data:', data )
-    max_spectrum = max(data)  # This might have to specify x or y coordinate.
+    amplitude_data = sn.getSpectrum_Y(spectrometer)  # Get only the y value
+    max_spectrum = max(amplitude_data)  # This is the maximum of the y values
     # Change the integration time so that the spectrum stays within the range. Make this better please
     if max_spectrum > 50000:
         inttime = inttime/2  # 1-498000 ms
     elif max_spectrum < 10000:
         inttime = inttime*2  # 1-498000 ms
     j += 1  # Increment file name
-    if j == 100:  # Delete this eventually, this is for testing purposes so it does not run forever
+    if j == 10:  # Delete this eventually, this is for testing purposes so it does not run forever
         i = 2
     end = time.perf_counter()  # Get time at end
-    while start - end < 1:  # This waits until at least 1 second has elapsed
+    while end - start < 1:  # This waits until at least 1 second has elapsed
         end = time.perf_counter()
+        print(end-start)
 
 
 #==============================================
