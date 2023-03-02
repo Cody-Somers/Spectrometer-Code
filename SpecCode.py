@@ -65,7 +65,7 @@ while i == 1:  # Infinite while loop
     data = sn.array_spectrum(spectrometer, wav)  # get specturm for the spectrometer
     f = open("specdata"+str(j)+".txt", "w+")
     for line in f:
-        f.write(str(data[line]))
+        f.write(str(data[line])) # if this doesnt work, remove for loop and line index
     f.close()
     # print('First data:', data )
     amplitude_data = sn.getSpectrum_Y(spectrometer)  # Get only the y value
