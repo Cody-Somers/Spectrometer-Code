@@ -1,4 +1,6 @@
 import time  # Check whether this is compatible with the pi.
+import numpy as np
+import math
 # You might have to do conda install time to get this to work
 
 try:
@@ -20,7 +22,7 @@ version = sn.version()
 print(version)	
 
 # Device parameters to set       
-inttime = 50   # 1-498000 ms
+inttime = 2000   # 1-498000 ms
 scansavg = 1   # > 1
 smooth = 0     # 1-4
 xtiming = 3    # 1-4
@@ -59,29 +61,56 @@ first_data = sn.getSpectrum_Y(spectrometer)
 """
 i = 1
 j = 1  # Counter for the while loop
+temp = inttime
 while i == 1:  # Infinite while loop
+    actualstart = time.perf_counter()  # Get time at start
+    # Reset the parameters so that inttime updates
+    if temp != inttime:
+        sn.setParam(spectrometer, inttime, scansavg, smooth, xtiming, False)
+    temp = inttime
+    print("The integration time is " + str(inttime))
+    
     start = time.perf_counter()  # Get time at start
+    print("Started collection")
     # Get spectrometer data - Get BOTH X and Y in single return
     data = sn.array_spectrum(spectrometer, wav)  # get specturm for the spectrometer
-    f = open("specdata"+str(j)+".txt", "w+")
-    for line in f:
-        f.write(str(data[line])) # if this doesnt work, remove for loop and line index
-    f.close()
-    # print('First data:', data )
-    amplitude_data = sn.getSpectrum_Y(spectrometer)  # Get only the y value
-    max_spectrum = max(amplitude_data)  # This is the maximum of the y values
-    # Change the integration time so that the spectrum stays within the range. Make this better please
-    if max_spectrum > 50000:
-        inttime = inttime/2  # 1-498000 ms
-    elif max_spectrum < 10000:
-        inttime = inttime*2  # 1-498000 ms
-    j += 1  # Increment file name
-    if j == 10:  # Delete this eventually, this is for testing purposes so it does not run forever
-        i = 2
+    print("Finished collection")
     end = time.perf_counter()  # Get time at end
-    while end - start < 1:  # This waits until at least 1 second has elapsed
-        end = time.perf_counter()
-        print(end-start)
+
+    f = open("DataStorage/specdata"+str(j)+".txt", "w+")
+    np.savetxt(f,data,fmt='%5.9f',delimiter=' ',header='Spectrum taken at t=' + str(start))
+    
+    max_spectrum = 0
+    for row in data:
+        if row[1] > max_spectrum:
+            max_spectrum = row[1]
+    f.close()
+    print("The max spectral value is " + str(max_spectrum))
+    # Change the integration time so that the spectrum stays within the range. Make this better please
+    if max_spectrum > 65000:
+        inttime = int(inttime/10)  # 1-498000 ms
+    elif max_spectrum < 5000:
+        inttime = int(inttime*10)  # 1-498000 ms
+    else:
+        y = 0.5*(max_spectrum/3000 - 10) # This will slowly centre the function towards a value of 30000 counts
+        if y > 1:
+            inttime = int(inttime/y)
+        elif y < -1:
+            inttime = int(inttime*-y)
+        # If the value is in between 36000 and 24000 the integration time will do nothing
+    print("The integration time was calculated at " + str(inttime))
+    
+    if inttime > 30000:
+        inttime = 30000 # Have a max integration time of thirty seconds
+    
+    j += 1  # Increment file name
+    if j == 20:  # Delete this eventually, this is for testing purposes so it does not run forever
+        i = 2
+    actualend = time.perf_counter()  # Get time at end
+    print("It took " + str(actualend-actualstart) + " seconds to run through the code")
+    print("It took " + str(end-start) + " seconds to collect spectrum\n")
+    while actualend - actualstart < 1:  # This waits until at least 1 second has elapsed
+        actualend = time.perf_counter()
 
 
 #==============================================
@@ -94,3 +123,4 @@ sn.reset(spectrometer)
 
 # For Windows ONLY: Must be run in administrator mode
 # sn.uninstallDeviceDriver() 
+
