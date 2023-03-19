@@ -1,7 +1,12 @@
-import time  # Check whether this is compatible with the pi.
+import time 
 import numpy as np
 import math
-# You might have to do conda install time to get this to work
+from pijuice import PiJuice
+import gpiozero as gz
+pijuice = PiJuice(1,0x14)
+cpu_temp = gz.CPUTemperature().temperature
+
+verystart = time.perf_counter() # Get time when the program was turned on
 
 try:
     from stellarnet_driverLibs import stellarnet_driver3 as sn
@@ -62,6 +67,7 @@ first_data = sn.getSpectrum_Y(spectrometer)
 i = 1
 j = 1  # Counter for the while loop
 temp = inttime
+
 while i == 1:  # Infinite while loop
     actualstart = time.perf_counter()  # Get time at start
     # Reset the parameters so that inttime updates
@@ -76,9 +82,18 @@ while i == 1:  # Infinite while loop
     data = sn.array_spectrum(spectrometer, wav)  # get specturm for the spectrometer
     print("Finished collection")
     end = time.perf_counter()  # Get time at end
+    
+    # Get all the info from the PiJuice and Pi
+    batt_temp = pijuice.status.GetBatteryTemperature()['data']
+    charge = pijuice.status.GetChargeLevel()['data']
+    volt = pijuice.status.GetBatteryVoltage()['data']
+    cpu_temp = gz.CPUTemperature().temperature
+    
+    # Flash the led
+    pijuice.status.SetLedBlink('D2',1,[127,0,200],50, [0,0,0],50)
 
     f = open("DataStorage/specdata"+str(j)+".txt", "w+")
-    np.savetxt(f,data,fmt='%5.9f',delimiter=' ',header='Spectrum taken at t=' + str(start))
+    np.savetxt(f,data,fmt='%5.9f',delimiter=' ',header='Spectrum started at t = ' + str(start-verystart) + ' seconds. \nCollection time of spectrum is ' + str(end-start) + ' seconds. \nIntegration time is inttime = ' + str(inttime) + ' ms. \nBattery temperature is battemp = ' + str(batt_temp)+ ' C. \nCPU temperature is cputemp = ' + str(cpu_temp)+ ' C. \nBattery charge is charge = ' + str(charge)+ ' %. \nBattery voltage is volt = ' + str(volt) + ' mV')
     
     max_spectrum = 0
     for row in data:
@@ -101,10 +116,10 @@ while i == 1:  # Infinite while loop
     print("The integration time was calculated at " + str(inttime))
     
     if inttime > 30000:
-        inttime = 30000 # Have a max integration time of thirty seconds
+        inttime = 30000 # Have a max integration time of "thirty" seconds but is more around 1min:30
     
     j += 1  # Increment file name
-    if j == 20:  # Delete this eventually, this is for testing purposes so it does not run forever
+    if j == 20000:  # Once 20000 files have been collected it will shut off. This is 5h30min at 1 second each spectrum.
         i = 2
     actualend = time.perf_counter()  # Get time at end
     print("It took " + str(actualend-actualstart) + " seconds to run through the code")
@@ -123,4 +138,5 @@ sn.reset(spectrometer)
 
 # For Windows ONLY: Must be run in administrator mode
 # sn.uninstallDeviceDriver() 
+
 
